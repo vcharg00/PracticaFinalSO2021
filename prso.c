@@ -30,7 +30,6 @@ struct cliente{
 	int atendido;					//0 no atendido, 1 atendiendo , 2 atendido
 	int tipo;						//0 no vip, 1 vip
 	int ascensor;
-	pthread_t hiloCliente
 };
 struct cliente clientes[20];
 
@@ -39,53 +38,54 @@ pthread_t recepcionistas[3];
 
 /* Lista de MaquinasCheckIn */
 
-pthread_t maquinasCheck[5];
+int maquinasCheck[5];
 
 /* Fichero de log */
 FILE *logFile;
 
 
 /* Declaracion de las funciones */
-
 void nuevoCliente(int sig);
-
+void terminar(int sig);
+void *accionesRecepcionista(void *arg);
 
 
 int main(int argc, char* argv[]){
 	struct sigaction ss;
 	int vip = 1;
 	int noVip = 0;
-
+	int i;
+	
 	ss.sa_handler= nuevoCliente;
 
- 		if (-1==sigaction(SIGUSR1,&ss,NULL)){
- 			perror("Fallo sigaction SIGUSR1");
- 			return 1;
- 		}
+	if (-1==sigaction(SIGUSR1,&ss,NULL)){
+		perror("Fallo sigaction SIGUSR1");
+		return 1;
+	}
 
- 		if (-1==sigaction(SIGUSR2,&ss,NULL)){
- 			perror("Fallo sigaction SIGUSR2");
- 			return 1;
- 		}
+	if (-1==sigaction(SIGUSR2,&ss,NULL)){
+		perror("Fallo sigaction SIGUSR2");
+		return 1;
+	}
 
- 		ss.sa_handler = terminar;
+	ss.sa_handler = terminar;
 
- 		if (-1==sigaction(SIGINT,&ss,NULL)){
- 			perror("Fallo sigaction SIGINT");
- 			return 1;
- 		}
+	if (-1==sigaction(SIGINT,&ss,NULL)){
+		perror("Fallo sigaction SIGINT");
+		return 1;
+	}
 
  	/* Inicializar recursos */
-
  	pthread_mutex_init(&mutexLog,NULL);
  	pthread_mutex_init(&mutexAscensor,NULL);
  	pthread_mutex_init(&mutexMaquinas,NULL);
  	pthread_mutex_init(&mutexColaClientes,NULL);
+ 	
 
  	contadorClientes = 0;
 
- 	pthread_cond_t(&condAscensor,NULL);
-  	pthread_cond_t(&condClientes,NULL);
+ 	pthread_cond_init(&condAscensor,NULL);
+  	pthread_cond_init(&condClientes,NULL);
   	
   	/*Lista de clientes*/
   	for(i = 0; i < 20; i++){
@@ -113,32 +113,28 @@ int main(int argc, char* argv[]){
 	contadorAscensor = 0;
 
 	/*Crear 3 hilos recepcionistas*/
-	pthread_create(&recepcionistas[0],NULL,accionesRecepcionista,&noVip);
-	pthread_create(&recepcionistas[1],NULL,accionesRecepcionista,&noVip);
+	pthread_create(&recepcionistas[0],NULL,&accionesRecepcionista,&noVip);
+	pthread_create(&recepcionistas[1],NULL,&accionesRecepcionista,&noVip);
 	pthread_create(&recepcionistas[2],NULL,accionesRecepcionista,&vip);
 
 	while(1){
-		sleep(2);
-		printf("Ejecutando...\n");
+		
+		
 	}
-
-
-	
-
-
-
-
+	return 0;
 }
 
 void nuevoCliente(int sig){
 
 }
+void terminar(int sig){
 
+}
+void *accionesRecepcionista(void *arg){
 
+}
 
-
-
-void writeLogMessage(char *id, char *msg) { 
+/*void writeLogMessage(char *id, char *msg) { 
 // Calculamos la hora actual
 time_t now = time(0);
 struct tm *tlocal = localtime(&now);
@@ -147,4 +143,4 @@ strftime(stnow, 25, "%d/%m/%y %H:%M:%S", tlocal); // Escribimos en el log
 logFile = fopen(logFileName, "a");
 fprintf(logFile, "[%s] %s: %s\n", stnow, id, msg);
 fclose(logFile);
-}
+}*/
