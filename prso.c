@@ -11,6 +11,8 @@
 
 /* Declaraciones globales */
 
+#define maximoClientes 20;
+
 /*Semaforos y variables condicion*/
 pthread_mutex_t mutexLog;
 pthread_mutex_t mutexColaClientes;
@@ -20,14 +22,15 @@ pthread_mutex_t mutexMaquinas;
 pthread_cond_t condAscensor;
 pthread_cond_t condClientes;
 
-int contadorClientes;
+int contadorIDClientes;
+int contadorClientes;				// Va de a 20
 int contadorAscensor;
 int ascensorFuncionando;			// 0 no funciona 1, si
 
 /* Lista de 20 clientes */
 struct cliente{
 	int id;
-	int atendido;					//0 no atendido, 1 atendiendo , 2 atendido
+	int atendido;					//0 no atendido, 1 siendo atendido , 2 atendido
 	int tipo;						//0 no vip, 1 vip
 	int ascensor;
 };
@@ -58,10 +61,14 @@ int main(int argc, char* argv[]){
 	
 	ss.sa_handler= nuevoCliente;
 
+	//Señal SIGUSR1 es no VIP
+
 	if (-1==sigaction(SIGUSR1,&ss,NULL)){
 		perror("Fallo sigaction SIGUSR1");
 		return 1;
 	}
+
+	//Señal SIGUSR2 es VIP
 
 	if (-1==sigaction(SIGUSR2,&ss,NULL)){
 		perror("Fallo sigaction SIGUSR2");
@@ -75,6 +82,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
+
  	/* Inicializar recursos */
  	pthread_mutex_init(&mutexLog,NULL);
  	pthread_mutex_init(&mutexAscensor,NULL);
@@ -82,7 +90,8 @@ int main(int argc, char* argv[]){
  	pthread_mutex_init(&mutexColaClientes,NULL);
  	
 
- 	contadorClientes = 0;
+ 	contadorClientes = -1;
+ 	contadorIDClientes = -1;
 
  	pthread_cond_init(&condAscensor,NULL);
   	pthread_cond_init(&condClientes,NULL);
@@ -125,6 +134,25 @@ int main(int argc, char* argv[]){
 }
 
 void nuevoCliente(int sig){
+
+	pthread_t hiloCliente;
+	pthread_mutex_lock(&mutexColaClientes);
+
+	if(contadorClientes < maximoClientes ){
+
+		contadorClientes++;
+		contadorIDClientes++;
+		clientes[contadorClientes].id = contadorIDClientes;
+		
+		if(sig == SIGUSR1){
+			clientes[contadorClientes].tipo = 0;			//Tipo no VIP
+		}else if(sig == SIGUSR2){
+			clientes[contadorClientes].tipo = 1;			//Tipo VIP
+		}
+
+		pthread_create(&hiloCliente,NULL,accionesCliente,contadorIDClientes);
+	}
+	pthread_mutex_unlock(&mutexColaClientes);
 
 }
 void terminar(int sig){
