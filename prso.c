@@ -11,7 +11,7 @@
 
 /* Declaraciones globales */
 
-#define maximoClientes 20;
+#define maximoClientes 20
 
 /*Semaforos y variables condicion*/
 pthread_mutex_t mutexLog;
@@ -20,7 +20,6 @@ pthread_mutex_t mutexAscensor;
 pthread_mutex_t mutexMaquinas;
 
 pthread_cond_t condAscensor;
-pthread_cond_t condClientes;
 
 int contadorIDClientes;
 int contadorClientes;				// Va de a 20
@@ -33,11 +32,9 @@ struct cliente{
 	int atendido;					//0 no atendido, 1 siendo atendido , 2 atendido
 	int tipo;						//0 no vip, 1 vip
 	int ascensor;
+	int checking;
 };
 struct cliente clientes[20];
-
-/* Lista de recepcionistas */
-pthread_t recepcionistas[3];
 
 /* Lista de MaquinasCheckIn */
 
@@ -50,51 +47,31 @@ FILE *logFile;
 /* Declaracion de las funciones */
 void nuevoCliente(int sig);
 void terminar(int sig);
+void *accionesCliente(void *arg);
 void *accionesRecepcionista(void *arg);
 
 
 int main(int argc, char* argv[]){
-	struct sigaction ss;
+	
 	int vip = 1;
 	int noVip = 0;
 	int i;
 	
-	ss.sa_handler= nuevoCliente;
-
-	//Señal SIGUSR1 es no VIP
-
-	if (-1==sigaction(SIGUSR1,&ss,NULL)){
-		perror("Fallo sigaction SIGUSR1");
-		return 1;
-	}
-
-	//Señal SIGUSR2 es VIP
-
-	if (-1==sigaction(SIGUSR2,&ss,NULL)){
-		perror("Fallo sigaction SIGUSR2");
-		return 1;
-	}
-
-	ss.sa_handler = terminar;
-
-	if (-1==sigaction(SIGINT,&ss,NULL)){
-		perror("Fallo sigaction SIGINT");
-		return 1;
-	}
-
+	/*enmascaramos las señales,SIGUSR1 cliente no vip, SIGUSR2 cliente vip, SIGINT terminar el programa */
+	signal(SIGUSR1, nuevoCliente);
+	signal(SIGUSR2, nuevoCliente);
+	signal(SIGINT, finalizar);
 
  	/* Inicializar recursos */
  	pthread_mutex_init(&mutexLog,NULL);
  	pthread_mutex_init(&mutexAscensor,NULL);
  	pthread_mutex_init(&mutexMaquinas,NULL);
  	pthread_mutex_init(&mutexColaClientes,NULL);
- 	
-
- 	contadorClientes = -1;
- 	contadorIDClientes = -1;
 
  	pthread_cond_init(&condAscensor,NULL);
-  	pthread_cond_init(&condClientes,NULL);
+ 	
+ 	contadorClientes = -1;
+ 	contadorIDClientes = -1;
   	
   	/*Lista de clientes*/
   	for(i = 0; i < 20; i++){
@@ -102,12 +79,12 @@ int main(int argc, char* argv[]){
   		clientes[i].atendido = 0;
   		clientes[i].tipo = 0;
   		clientes[i].ascensor = 0;
+  		clientes[i].checking = 0;
   	}
 
   	/*Lista de recepcionistas*/
-  	for(i = 0; i < 3 ; i++){			//0 y 1 no atienden a vip, 2 atiende a VIP
-  		recepcionistas[i] = 0;			//contador de los que ha atendido un recepcionista.	
-  	}
+  	pthread_t recepcionista1, recepcionista2, recepcionista3;
+  	
 
   	/*Máquinas de checkIn*/
   	for(i = 0; i < 5; i++){
@@ -115,16 +92,16 @@ int main(int argc, char* argv[]){
   	}
 
   	/*Fichero log*/
-  	logFile = fopen("registroPrograma.log", "w");
+  	logFile = fopen("registroTiempos.log", "w");
 
   	/*Variables relativas al ascensor*/
 	ascensorFuncionando = 0;
 	contadorAscensor = 0;
 
 	/*Crear 3 hilos recepcionistas*/
-	pthread_create(&recepcionistas[0],NULL,&accionesRecepcionista,&noVip);
-	pthread_create(&recepcionistas[1],NULL,&accionesRecepcionista,&noVip);
-	pthread_create(&recepcionistas[2],NULL,accionesRecepcionista,&vip);
+	pthread_create(&recepcionista1,NULL,accionesRecepcionista,&noVip);
+	pthread_create(&recepcionista2,NULL,accionesRecepcionista,&noVip);
+	pthread_create(&recepcionista3,NULL,accionesRecepcionista,&vip);
 
 	while(1){
 		
@@ -135,6 +112,9 @@ int main(int argc, char* argv[]){
 
 void nuevoCliente(int sig){
 
+	signal(SIGUSR1, nuevoCliente);
+	signal(SIGUSR2, nuevoCliente);
+	
 	pthread_t hiloCliente;
 	pthread_mutex_lock(&mutexColaClientes);
 
@@ -150,17 +130,24 @@ void nuevoCliente(int sig){
 			clientes[contadorClientes].tipo = 1;			//Tipo VIP
 		}
 
-		pthread_create(&hiloCliente,NULL,accionesCliente,contadorIDClientes);
+		pthread_create(&hiloCliente,NULL,accionesCliente,&contadorIDClientes);
 	}
 	pthread_mutex_unlock(&mutexColaClientes);
 
 }
-void terminar(int sig){
+
+void *accionesCliente(void *arg){
 
 }
 void *accionesRecepcionista(void *arg){
 
 }
+void terminar(int sig){
+	signal(SIGUSR1, SIG_IGN);
+	signal(SIGUSR2, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
+}
+
 
 /*void writeLogMessage(char *id, char *msg) { 
 // Calculamos la hora actual
