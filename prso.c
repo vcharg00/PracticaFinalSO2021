@@ -25,6 +25,7 @@ int contadorIDClientes;
 int contadorClientes;				// Va de a 20
 int contadorAscensor;
 int ascensorFuncionando;			// 0 no funciona 1, si
+int fin;
 
 /* Lista de 20 clientes */
 struct cliente{
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]){
 	/*enmascaramos las señales,SIGUSR1 cliente no vip, SIGUSR2 cliente vip, SIGINT terminar el programa */
 	signal(SIGUSR1, nuevoCliente);
 	signal(SIGUSR2, nuevoCliente);
-	signal(SIGINT, finalizar);
+	signal(SIGINT, terminar);
 
  	/* Inicializar recursos */
  	pthread_mutex_init(&mutexLog,NULL);
@@ -74,6 +75,7 @@ int main(int argc, char* argv[]){
  	
  	contadorClientes = -1;
  	contadorIDClientes = -1;
+ 	fin=0;
   	
   	/*Lista de clientes*/
   	for(i = 0; i < 20; i++){
@@ -168,67 +170,60 @@ int clienteMayorTiempoEsperando(int tipoRecepcionista){
 	return posicion;
 }
 
-
-
-
 void *accionesRecepcionista(void *arg){
 
-    int tipoRecepcionista = *(int *) arg;
-    int recepcionistaOcupado = 0; 			//Ocupado = 1, no ocupado = 0	
-    int posicionCliente;
-    int aleatorio = -1;
-    int contadorClientesAtendidos = 0;
+	int tipoRecepcionista = *(int *) arg;
+	int recepcionistaOcupado = 0; 			//Ocupado = 1, no ocupado = 0	
+	int posicionCliente;
+	int aleatorio = -1;
+	int contadorClientesAtendidos = 0;
     
+	while(fin != 2){
+	    	posicionCliente = clienteMayorTiempoEsperando(tipoRecepcionista);
+		if(recepcionistaOcupado == 0){
 
+		    	pthread_mutex_lock(&mutexColaClientes);
+		    	clientes[posicionCliente].atendido = 1;
+		    	pthread_mutex_unlock(&mutexColaClientes);
 
-    while(fin != 2){
+		    	recepcionistaOcupado = 1;
+		    	aleatorio = calculaAleatorios(0,100);
+		    	if(aleatorio <=80){
+		    		printf("El cliente tiene todo en regla");
+		    		sleep((calculaAleatorios(1,4)));
+		    		pthread_mutex_lock(&mutexColaClientes);
+		    		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el paciente
+		    		pthread_mutex_unlock(&mutexColaClientes);
 
-    posicionCliente = clienteMayorTiempoEsperando(tipoRecepcionista);
+		    	} else if(aleatorio<= 90){
+		      		printf("El cliente no se ha identificado correctamente");
+		     		sleep((calculaAleatorios(2,6)));
+		   			pthread_mutex_lock(&mutexColaClientes);
+		     		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el paciente
+		    		pthread_mutex_unlock(&mutexColaClientes);
 
-    if(recepcionistaOcupado == 0){
+		    	}else{
+		       		printf("El cliente no tiene el pasaporte vacunal");   
+		       		sleep((calculaAleatorios(6,10)));	
+		       		pthread_mutex_lock(&mutexColaClientes);
+		    		clientes[posicionCliente].atendido = 5;		//el paciente se tiene que ir, metemos dentro de la funcion finalizar que si un paciente.atendido= 5, se acabe su hilo???
+		    		pthread_mutex_unlock(&mutexColaClientes);
 
-    	pthread_mutex_lock(&mutexColaClientes);
-    	clientes[posicionCliente].atendido = 1;
-    	pthread_mutex_unlock(&mutexColaClientes);
+		    	}
 
-    	recepcionistaOcupado = 1;
-    	aleatorio = calculaAleatorios(0,100);
-    	if(aleatorio <=80){
-    		printf("El cliente tiene todo en regla");
-    		sleep((calculaAleatorios(1,4)));
-    		pthread_mutex_lock(&mutexColaClientes);
-    		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el paciente
-    		pthread_mutex_unlock(&mutexColaClientes);
+		    	contadorClientesAtendidos++;
 
-    	} else if(aleatorio<= 90){
-      		printf("El cliente no se ha identificado correctamente");
-     		sleep((calculaAleatorios(2,6)));
-   			pthread_mutex_lock(&mutexColaClientes);
-     		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el paciente
-    		pthread_mutex_unlock(&mutexColaClientes);
+		    	if(contadorClientesAtendidos == 5 && tipoRecepcionista != 1){		//Preguntar, recepcionista tipo 0 = novip y tipo 1 = vip???
+		    		printf("El recepcionista va a descansar 5 segundos");
+		    		sleep(5);
+		    		contadorClientesAtendidos = 0;
+		    	}
 
-    	}else{
-       		printf("El cliente no tiene el pasaporte vacunal");   
-       		sleep((calculaAleatorios(6,10)));	
-       		pthread_mutex_lock(&mutexColaClientes);
-    		clientes[posicionCliente].atendido = 5;		//el paciente se tiene que ir, metemos dentro de la funcion finalizar que si un paciente.atendido= 5, se acabe su hilo???
-    		pthread_mutex_unlock(&mutexColaClientes);
+		    	recepcionistaOcupado = 0;
+		}
+		sleep(1);
 
-    	}
-
-    	contadorClientesAtendidos++;
-
-    	if(contadorClientesAtendidos == 5 && tipoRecepcionista != 1){		//Preguntar, recepcionista tipo 0 = novip y tipo 1 = vip???
-    		printf("El recepcionista va a descansar 5 segundos");
-    		sleep(5);
-    		contadorClientesAtendidos = 0;
-    	}
-
-    	recepcionistaOcupado = 0;
-}
-	sleep(1);
-
-}
+	}
 }
 void terminar(int sig){
 	signal(SIGUSR1, SIG_IGN);
