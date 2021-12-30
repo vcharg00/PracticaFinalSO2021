@@ -3,6 +3,7 @@
 # include <time.h>
 # include <pthread.h>
 # include <signal.h>
+#include <sys/syscall.h>
 # include <sys/types.h>
 # include <unistd.h>
 # include <string.h>
@@ -166,9 +167,6 @@ int comprobarAtendido(int id){
     return atendido;
 }
 
-
-
-
 void *accionesCliente(void *arg){
 
 	int posicion = *(int *) arg;
@@ -185,27 +183,25 @@ void *accionesCliente(void *arg){
 
 		while(1){
 			atendido = comprobarAtendido(clientes[posicion].id);
-			if(atendido == 0){		//PUNTO 4
-																		// El 90% restante se mantienen esperando
+			if(atendido == 0){		//PUNTO 4 90% restante se mantienen esperando						 
 					aleatorio = calculaAleatorios(1,100);
-					if(aleatorio <= 20){									//Se cansan de esperar y se van a las maquinas de checking
+					if(aleatorio <= 20){	//Se cansan de esperar y se van a las maquinas de checking
 						printf("El cliente con ID %d se cansa de esperar y decide ir a las maquinas de checking\n",clientes[posicion].id);
-
-					}else if(aleatorio > 20 &&(aleatorio <= 30)){			//Se cansa de esperar y abandona el hotel
+					}else if(aleatorio > 20 &&(aleatorio <= 30)){	//Se cansa de esperar y abandona el hotel
 							printf("El cliente con ID %d se ha cansado de esperar y abandona el hotel\n",clientes[posicion].id);
 							eliminarCliente(clientes[posicion].id);
 							pthread_exit(NULL);
 					}else{
 						aleatorio = calculaAleatorios(1,100);
-						if(aleatorio <=5){									//Se va al baño y abanadona el hotel
+						if(aleatorio <=5){		//Se va al baño y abanadona el hotel
 							printf("El cliente con ID %d se ha ido al baño y abandona el hotel\n",clientes[posicion].id);
 							eliminarCliente(clientes[posicion].id);
 							pthread_exit(NULL);
 						}
 					}
-					//te subo el codigo de la practica y mañana miramos los errores porque veo que es imposible la COMUNICACIOOOOOONNNNNNNNNN
-					sleep(3);			//Si no ha sido atendido duerme 3 segundos y vuelve a hacer todas las comprobaciones.
-				}
+					
+					sleep(3);	//Si no ha sido atendido duerme 3 segundos y vuelve a hacer todas las comprobaciones.
+				
 			}else if(atendido == 1){		//PUNTO 5
 				sleep(2);
 			}else if(atendido == 2){		//PUNTO 6
@@ -385,7 +381,7 @@ void terminar(int sig){
 int calculaAleatorios(int min, int max){
     return rand() % (max - min + 1) + min;
 }
-/
+
 /*Funcion para utilizar srand().*/
 pid_t gettid(void){
     return syscall(__NR_gettid);
