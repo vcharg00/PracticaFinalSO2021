@@ -54,6 +54,7 @@ void *accionesRecepcionista(void *arg);
 int calculaAleatorios(int min, int max);
 int clienteMayorTiempoEsperando(int tipoRecepcionista);
 void eliminarCliente(int id);
+int comprobarAtendido(int ID);
 pid_t gettid(void);
 
 int main(int argc, char* argv[]){
@@ -146,8 +147,93 @@ void nuevoCliente(int sig){
 
 }
 
+int comprobarAtendido(int id){
+	int atendido;
+    int i = 0;
+    int posicion = -1;
+
+    pthread_mutex_lock(&mutexColaClientes);
+    while (posicion == -1)
+    {
+        if(clientes[i].id == id){
+            posicion = i;
+            atendido = clientes[posicion].atendido;
+        }
+        i++;
+    }
+    pthread_mutex_unlock(&mutexColaClientes);
+
+    return atendido;
+}
+
+
+
+
 void *accionesCliente(void *arg){
 
+	int posicion = *(int *) arg;
+	int atendido;
+	int aleatorio;
+	//	1. Guardar en el log la hora de entrada.
+	//	2. Guardar en el log el tipo de cliente.
+	srand(gettid());
+
+	aleatorio = calculaAleatorios(1,100);
+	if(aleatorio <= 10){										//10% de los clientes decide ir automaticamente a las maquinas de checking
+		printf("El cliente con ID %d decide ir automaticamente a las maquinas de checking\n",clientes[posicion].id);
+	}else{
+
+		while(1){
+			atendido = comprobarAtendido(clientes[posicion].id);
+			if(atendido == 0){		//PUNTO 4
+																		// El 90% restante se mantienen esperando
+					aleatorio = calculaAleatorios(1,100);
+					if(aleatorio <= 20){									//Se cansan de esperar y se van a las maquinas de checking
+						printf("El cliente con ID %d se cansa de esperar y decide ir a las maquinas de checking\n",clientes[posicion].id);
+
+					}else if(aleatorio > 20 &&(aleatorio <= 30)){			//Se cansa de esperar y abandona el hotel
+							printf("El cliente con ID %d se ha cansado de esperar y abandona el hotel\n",clientes[posicion].id);
+							eliminarCliente(clientes[posicion].id);
+							pthread_exit(NULL);
+					}else{
+						aleatorio = calculaAleatorios(1,100);
+						if(aleatorio <=5){									//Se va al baño y abanadona el hotel
+							printf("El cliente con ID %d se ha ido al baño y abandona el hotel\n",clientes[posicion].id);
+							eliminarCliente(clientes[posicion].id);
+							pthread_exit(NULL);
+						}
+					}
+					//te subo el codigo de la practica y mañana miramos los errores porque veo que es imposible la COMUNICACIOOOOOONNNNNNNNNN
+					sleep(3);			//Si no ha sido atendido duerme 3 segundos y vuelve a hacer todas las comprobaciones.
+				}
+			}else if(atendido == 1){		//PUNTO 5
+				sleep(2);
+			}else if(atendido == 2){		//PUNTO 6
+				aleatorio = calculaAleatorios(1,100);
+				if(aleatorio <=30){			// El cliente espera al ascensor
+					pthread_mutex_lock(&mutexColaClientes);
+					clientes[posicion].ascensor = 1;
+					pthread_mutex_unlock(&mutexColaClientes);
+					printf("El paciente con ID %d está preparado para coger el ascensor\n",clientes[posicion].id);
+					if(fin != 1){
+						while(ascensorFuncionando == 1 &&(contadorAscensor == 6)){			//Mientras el ascensor esté lleno o este funcionando se queda esperando.
+							sleep(3);
+						}
+					}else{
+						printf("El cliente con ID %d  no espera al ascensor porque se deja de atender a clientes.\n",clientes[posicion].id);
+						eliminarCliente(clientes[posicion].id);
+						pthread_exit(NULL);			
+					}			
+				}else{
+					printf("El cliente con ID %d ha sido atendido, no espera al ascensor y se va a su habitación\n",clientes[posicion].id);
+					eliminarCliente(clientes[posicion].id);
+					pthread_exit(NULL);					
+				}
+
+			}
+
+		}
+	}
 }
 
 int clienteMayorTiempoEsperando(int tipoRecepcionista){
