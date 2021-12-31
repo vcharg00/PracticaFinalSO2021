@@ -56,6 +56,7 @@ int calculaAleatorios(int min, int max);
 int clienteMayorTiempoEsperando(int tipoRecepcionista);
 void eliminarCliente(int id);
 int comprobarAtendido(int ID);
+int maquinasLibres();
 pid_t gettid(void);
 
 int main(int argc, char* argv[]){
@@ -167,8 +168,25 @@ int comprobarAtendido(int id){
     return atendido;
 }
 
+int maquinasLibres(){
+	int posicion = -1;
+	int i = 0;
+
+	pthread_mutex_lock(&mutexMaquinas);
+	while(posicion==-1 &&(i<5)){
+		if(maquinasCheck[i]==0){
+			posicion = i;
+
+		}
+		i++;
+	}
+	pthread_mutex_unlock(&mutexMaquinas);
+	return posicion;
+}
+
 void *accionesCliente(void *arg){
 
+	int maquinaLibre;
 	int posicion = *(int *) arg;
 	int atendido;
 	int aleatorio;
@@ -179,6 +197,28 @@ void *accionesCliente(void *arg){
 	aleatorio = calculaAleatorios(1,100);
 	if(aleatorio <= 10){										//10% de los clientes decide ir automaticamente a las maquinas de checking
 		printf("El cliente con ID %d decide ir automaticamente a las maquinas de checking\n",clientes[posicion].id);
+		maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
+		if(maquinaLibre != -1){					//si la maquina esta libre, es decir cualquier posicion distinta de -1...
+			maquinasCheck[maquinaLibre] = 1;	//Pongo la maquina como ocupada 
+			pthread_mutex_lock(&mutexColaClientes);
+			clientes[posicion].atendido = 1;	//el cliente se atiende a si mismo, y simula situacion durmiendo 6 segs
+			pthread_mutex_unlock(&mutexColaClientes);
+			sleep(6);
+			pthread_mutex_lock(&mutexColaClientes);
+			clientes[posicion].atendido = 2;
+			pthread_mutex_unlock(&mutexColaClientes);
+			//ahora deberia comprobar que me voy a ascensores o me voy pa mi casa, pero como hago para ir al punto 6 o directamente al tener el atendido a 2, ya voy al punto 6 no?
+
+		}else{								//si no hay maquinas libres
+			sleep(3);
+			aleatorio = calculaAleatorios(1,100);
+			if(aleatorio <= 50){
+				printf("El cliente con ID %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal\n",clientes[posicion].id);
+				//deberia irme al punto 4, como me voy, me voy automaticamente, porque me voy a salir de las dos condiciones?
+			}
+
+		}
+
 	}else{
 
 		while(1){
@@ -212,8 +252,10 @@ void *accionesCliente(void *arg){
 					pthread_mutex_unlock(&mutexColaClientes);
 					printf("El paciente con ID %d está preparado para coger el ascensor\n",clientes[posicion].id);
 					if(fin != 1){
-						while(ascensorFuncionando == 1 &&(contadorAscensor == 6)){			//Mientras el ascensor esté lleno o este funcionando se queda esperando.
+						if(ascensorFuncionando == 1 &&(contadorAscensor == 6)){			//Mientras el ascensor esté lleno o este funcionando se queda esperando.
 							sleep(3);
+						}else{
+
 						}
 					}else{
 						printf("El cliente con ID %d  no espera al ascensor porque se deja de atender a clientes.\n",clientes[posicion].id);
