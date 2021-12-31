@@ -190,33 +190,42 @@ void *accionesCliente(void *arg){
 	int posicion = *(int *) arg;
 	int atendido;
 	int aleatorio;
+	int condMaquinas=0;
 	//	1. Guardar en el log la hora de entrada.
 	//	2. Guardar en el log el tipo de cliente.
 	srand(gettid());
 
 	aleatorio = calculaAleatorios(1,100);
-	if(aleatorio <= 10){										//10% de los clientes decide ir automaticamente a las maquinas de checking
-		printf("El cliente con ID %d decide ir automaticamente a las maquinas de checking\n",clientes[posicion].id);
-		maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
-		if(maquinaLibre != -1){					//si la maquina esta libre, es decir cualquier posicion distinta de -1...
-			maquinasCheck[maquinaLibre] = 1;	//Pongo la maquina como ocupada 
-			pthread_mutex_lock(&mutexColaClientes);
-			clientes[posicion].atendido = 1;	//el cliente se atiende a si mismo, y simula situacion durmiendo 6 segs
-			pthread_mutex_unlock(&mutexColaClientes);
-			sleep(6);
-			pthread_mutex_lock(&mutexColaClientes);
-			clientes[posicion].atendido = 2;
-			pthread_mutex_unlock(&mutexColaClientes);
-			//ahora deberia comprobar que me voy a ascensores o me voy pa mi casa, pero como hago para ir al punto 6 o directamente al tener el atendido a 2, ya voy al punto 6 no?
+	if(aleatorio <= 10){	//10% de los clientes decide ir automaticamente a las maquinas de checking
+		while(condMaquinas!=1){
+			printf("El cliente con ID %d decide ir automaticamente a las maquinas de checking\n",clientes[posicion].id);
+			maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
+			if(maquinaLibre != -1){			//si la maquina esta libre, es decir cualquier posicion distinta de -1...				
+				pthread_mutex_lock(&mutexMaquinas);
+				maquinasCheck[maquinaLibre] = 1;	//Pongo la maquina como ocupada 
+				pthread_mutex_unlock(&mutexMaquinas);
+				pthread_mutex_lock(&mutexColaClientes);
+				clientes[posicion].atendido = 1;	//el cliente se atiende a si mismo, y simula situacion durmiendo 6 segs
+				sleep(6);	
+				pthread_mutex_unlock(&mutexColaClientes);
+				
+				pthread_mutex_lock(&mutexColaClientes);
+				clientes[posicion].atendido = 2;
+				pthread_mutex_unlock(&mutexColaClientes);
+				condMaquinas=1;
 
-		}else{								//si no hay maquinas libres
-			sleep(3);
-			aleatorio = calculaAleatorios(1,100);
-			if(aleatorio <= 50){
-				printf("El cliente con ID %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal\n",clientes[posicion].id);
-				//deberia irme al punto 4, como me voy, me voy automaticamente, porque me voy a salir de las dos condiciones?
+			}else{								//si no hay maquinas libres
+				sleep(3);
+				aleatorio = calculaAleatorios(1,100);
+				if(aleatorio <= 50){
+					printf("El cliente con ID %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal\n",clientes[posicion].id);
+					condMaquinas=1;
+					
+				}else{
+					condMaquinas=0;		//se mantiene dentro del bucle
+				}
+
 			}
-
 		}
 
 	}else{
