@@ -64,9 +64,9 @@ void *ascensor(void *arg);
 
 int main(int argc, char* argv[]){
 	
-	int vip = 2;
-	int noVip1 = 0;
-	int noVip2 = 1;
+	int vip = 2;	//vip
+	int noVip1 = 0; //no vip
+	int noVip2 = 1;	//no vip
 	int i;
 	
 	/*enmascaramos las señales,SIGUSR1 cliente no vip, SIGUSR2 cliente vip, SIGINT terminar el programa */
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]){
 
 	while(1){
 		if(fin==1){	//con fin=1 se espera a que se vacie el ascensor y los clientes esperando.
-			if((contadorClientes==0)&&(ascensorFuncionando==0){
+			if((contadorClientes==0)&&(ascensorFuncionando==0)){
 				fin=2;		//con fin=2 se termina todo el programa.
 				printf("Se ha cerrado el hotel.\n");
 				sleep(5);
@@ -207,9 +207,9 @@ void *accionesCliente(void *arg){
 	srand(gettid());
 	
 	printf("el cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
-	
+	sleep(3);
 	aleatorio = calculaAleatorios(1,100);
-	if(aleatorio <= 10){	//10% de los clientes decide ir automaticamente a las maquinas de checking
+	if(aleatorio <= 1){	//10% de los clientes decide ir automaticamente a las maquinas de checking
 		while(condMaquinas!=1){
 			printf("El cliente con id %d decide ir automaticamente a las maquinas de checking\n",id);
 			maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
@@ -352,8 +352,14 @@ int clienteMayorTiempoEsperando(int tipoRecepcionista){
 	//Primero se buscan clientes del mismo tipo que el recepcionista
 	pthread_mutex_lock(&mutexColaClientes);
 	while (posicion == -1 && i < maximoClientes) {
-		if(clientes[i].tipo == tipoRecepcionista && clientes[i].id!=0 && clientes[i].atendido == 0){
-			posicion = i;
+		if((tipoRecepcionista==2)&&(clientes[i].tipo==1)){ 	//si el recepcionista es vip y el cliente tambien entra aquí.
+			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
+				posicion = i;
+			}
+		}else if(((clientes[i].tipo==0)&&(tipoRecepcionista==0))||((clientes[i].tipo==0)&&(tipoRecepcionista==1))){ //si el recepcionista es no vip y el cliente tambien, entra aquí.
+			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
+				posicion = i;
+			}
 		}
 		i++;
 	}
@@ -362,15 +368,22 @@ int clienteMayorTiempoEsperando(int tipoRecepcionista){
 
 	return posicion;
 }
-/*FALTAN LOGS, FALTA DISTINGUIR A LOS RECEPCIONISTAS, QUE RECEPCIONISTA ATIENDE A QUE CLIENTE.*/
+/*FALTAN LOGS.*/
 void *accionesRecepcionista(void *arg){
 
-	int tipoRecepcionista = *(int *) arg;		//tipo del recepcionista 0=no vip 1=vip;
-	int recepcionistaOcupadoNoVip = 0;		//Ocupado = 1, no ocupado = 0
-	int recepcionistaOcupadoVip = 0;  		//Ocupado = 1, no ocupado = 0	
+	int tipoRecepcionista = *(int *) arg;		//tipo del recepcionista 0, 1=novip, 2=vip;
+	int recepcionistaOcupado = 0;		//Ocupado = 1, no ocupado = 0	
 	int posicionCliente;
-	int aleatorio = -1;
+	int aleatorio;
 	int contadorClientesAtendidos = 0;
+	
+	if(tipoRecepcionista==0){
+		printf("recepcionista %d atiende a clientes no vip.\n",tipoRecepcionista);
+	}else if(tipoRecepcionista==1){
+		printf("recepcionista %d atiende a clientes no vip.\n",tipoRecepcionista);
+	}else if(tipoRecepcionista==2){
+		printf("recepcionista %d atiende a clientes vip.\n",tipoRecepcionista);
+	}
 	
 	srand(gettid());
     
@@ -378,97 +391,72 @@ void *accionesRecepcionista(void *arg){
 	    	posicionCliente = clienteMayorTiempoEsperando(tipoRecepcionista);
 	    	int id=clientes[posicionCliente].id;
 	    	int checking=clientes[posicionCliente].checking;
-	    	/*acciones recepcionistas no vip*/
-	    	if((tipoRecepcionista==0)||(tipoRecepcionista==1)){
-	    		if((recepcionistaOcupadoNoVip==0)&&(contadorClientes!=0)&&(posicionCliente!=-1)&&(checking!=1)){ 
-	    			pthread_mutex_lock(&mutexColaClientes);
-	    			clientes[posicionCliente].atendido = 1;		//el cliente está siendo atendido
-	    			pthread_mutex_unlock(&mutexColaClientes);
+	    	int tipo=clientes[posicionCliente].tipo;
+	    	
+	    	if((contadorClientes!=0)&&(recepcionistaOcupado==0)&&(posicionCliente!=-1)&&(checking==0)){
+	    		pthread_mutex_lock(&mutexColaClientes);
+	    		clientes[posicionCliente].atendido=1;
+	    		pthread_mutex_unlock(&mutexColaClientes);
+	    		
+	    		recepcionistaOcupado=1;
+	    		
 	    		if(tipoRecepcionista==0){
-	    			printf("entra el cliente %d en la cola no vip1 con el recepcionista %d.\n",id,tipoRecepcionista);
-	    		}else if(tipoRecepcionista==1){
-	    			printf("entra el cliente %d en la cola no vip2con el recepcionista %d.\n",id,tipoRecepcionista);
-	    		}
-	    		
-	    		recepcionistaOcupadoNoVip=1;
-	    		contadorClientesAtendidos++;
-	    		
-	    		aleatorio = calculaAleatorios(0,100);	//calculamos el aleatorio
-	    		
-	    		if(aleatorio <=80){ //80% todo en regla.
-	    			printf("El cliente tiene todo en regla\n");
+				printf("el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+			}else if(tipoRecepcionista==1){
+				printf("el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+			}else if(tipoRecepcionista==2){
+				printf("el cliente %d es atendido en la cola vip por el recepcionista %d.\n",id,tipoRecepcionista);
+			}
+			
+			if((tipoRecepcionista==0)||(tipoRecepcionista==1)){
+				contadorClientesAtendidos++;
+			}
+			
+			aleatorio=calculaAleatorios(0,100);
+			
+			if(aleatorio <=80){ //80% todo en regla.
+	    			printf("El cliente %d tiene todo en regla\n",id);
 	    			sleep((calculaAleatorios(1,4)));
+	    			
+	    			printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
+	    			sleep(1);
 		    		pthread_mutex_lock(&mutexColaClientes);
 		    		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
 		    		pthread_mutex_unlock(&mutexColaClientes);
 		    		
 		    	}else if(aleatorio<= 90){	//10%mal identificados.
-		      		printf("El cliente no se ha identificado correctamente\n");
+		      		printf("El cliente %d no se ha identificado correctamente le atienden mas despacio\n",id);
 		     		sleep((calculaAleatorios(2,6)));
+		     		
+		     		printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
+		     		sleep(1);
 		   		pthread_mutex_lock(&mutexColaClientes);
 		     		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
 		    		pthread_mutex_unlock(&mutexColaClientes);
 
 		    	}else{	//10% no tienen el pasaporte vacunal.
-		       		printf("El cliente no tiene el pasaporte vacunal\n");   
+		       		printf("El cliente %d ha sido atendido por el recepcionista %d, pero no tiene el pasaporte vacunal asique se marcha\n",id,tipoRecepcionista);  
 		       		sleep((calculaAleatorios(6,10)));	
 		       		eliminarCliente(id);
 		       		pthread_exit(NULL);
 
 		    	}
-		    	if(contadorClientesAtendidos==5){		
-		    		printf("El recepcionista va a descansar 5 segundos\n");
+		    	if(contadorClientesAtendidos==5){	//al llegar a 5 el recepcionista descansa
+		    		printf("El recepcionista %d va a descansar 5 segundos\n",tipoRecepcionista);
 		    		sleep(5);
 		    		contadorClientesAtendidos = 0;
-		    	
-	    		}
-	    		recepcionistaOcupadoNoVip=0;
-	    		
-	    		
-	    	}else{ 		//vuelve a comprobar si hay clientes esperando.
-	    		sleep(1);
-	    	}
-	    	}
-	    	
-	    	/*acciones recepcionistas vip*/
-	    	if((tipoRecepcionista==2)&&(recepcionistaOcupadoVip==0)&&(contadorClientes!=0)&&(posicionCliente!=-1)){ 
-	    		printf("entra el cliente %d en la cola vip.\n",id);
-	    		recepcionistaOcupadoVip=1;
-	    		
-	    		pthread_mutex_lock(&mutexColaClientes);
-	    		clientes[posicionCliente].atendido = 1;		//el cliente está siendo atendido
-	    		pthread_mutex_unlock(&mutexColaClientes);
-	    		
-	    		aleatorio = calculaAleatorios(0,100);	//calculamos el aleatorio
-	    		
-	    		if(aleatorio <=80){	//80% todo en regla.
-		    		printf("El cliente tiene todo en regla\n");
-		    		sleep((calculaAleatorios(1,4)));
-		    		pthread_mutex_lock(&mutexColaClientes);
-		    		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
-		    		pthread_mutex_unlock(&mutexColaClientes);
-
-		    	}else if(aleatorio<= 90){	//10%mal identificados.
-		      		printf("El cliente no se ha identificado correctamente\n");
-		     		sleep((calculaAleatorios(2,6)));
-		   		pthread_mutex_lock(&mutexColaClientes);
-		     		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
-		    		pthread_mutex_unlock(&mutexColaClientes);
-
-		    	}else{	//10% no tienen el pasaporte vacunal.
-		       		printf("El cliente no tiene el pasaporte vacunal\n");   
-		       		sleep((calculaAleatorios(6,10)));	
-		       		eliminarCliente(id);
-		       		pthread_exit(NULL);
-
 		    	}
-		    	recepcionistaOcupadoVip=0;
-	    	}else{
-	    		sleep(1);
-	    	}
+		    	sleep(1);
+		    	recepcionistaOcupado=0;
+			    		
+		}else{
+			sleep(1);	//vuelve a comprobar si hay clientes que atender
+		}
+	    	
 	}
 	
-	pthread_exit(NULL);	
+	pthread_exit(NULL); //mata a los recepcionistas
+
 }
 
 void eliminarCliente(int id){
