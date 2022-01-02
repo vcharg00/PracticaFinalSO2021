@@ -119,9 +119,13 @@ int main(int argc, char* argv[]){
 	printf("pid al que enviar las señales: %d\n",getpid());
 
 	while(1){
-		if(fin==1){
-			printf("prueba fin =1\n");
-			return 0;
+		if(fin==1){	//con fin=1 se espera a que se vacie el ascensor y los clientes esperando.
+			if((contadorClientes==0)&&(ascensorFuncionando==0){
+				fin=2;		//con fin=2 se termina todo el programa.
+				printf("Se ha cerrado el hotel.\n");
+				sleep(5);
+				return 0;
+			}
 		}
 	}
 }
@@ -138,9 +142,9 @@ void nuevoCliente(int sig){
 		clientes[contadorClientes].id = contadorIDClientes;
 		
 		if(sig == SIGUSR1){
-			clientes[contadorClientes].tipo = 0;			//Tipo no VIP
+			clientes[contadorClientes].tipo = 0;		//Tipo no VIP
 		}else if(sig == SIGUSR2){
-			clientes[contadorClientes].tipo = 1;			//Tipo VIP
+			clientes[contadorClientes].tipo = 1;		//Tipo VIP
 		}
 		
 		pthread_create(&clientes[posicion].thCliente,NULL,accionesCliente,&posicion);
@@ -408,7 +412,8 @@ void *accionesRecepcionista(void *arg){
 		    	}else{	//10% no tienen el pasaporte vacunal.
 		       		printf("El cliente no tiene el pasaporte vacunal\n");   
 		       		sleep((calculaAleatorios(6,10)));	
-		       		eliminarCliente(clientes[posicionCliente].id);
+		       		eliminarCliente(id);
+		       		pthread_exit(NULL);
 
 		    	}
 		    	if(contadorClientesAtendidos==5){		
@@ -453,7 +458,8 @@ void *accionesRecepcionista(void *arg){
 		    	}else{	//10% no tienen el pasaporte vacunal.
 		       		printf("El cliente no tiene el pasaporte vacunal\n");   
 		       		sleep((calculaAleatorios(6,10)));	
-		       		eliminarCliente(clientes[posicionCliente].id);
+		       		eliminarCliente(id);
+		       		pthread_exit(NULL);
 
 		    	}
 		    	recepcionistaOcupadoVip=0;
