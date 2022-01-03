@@ -502,13 +502,13 @@ void *accionesRecepcionista(void *arg){
 
 }
 
-void writeLogMessage (int ClienteRecepcionistaMaquina, int ID, char *msg) {
+void writeLogMessage (char *id, char *msg) {
     pthread_mutex_lock(&mutexLog);
 	// Calculamos la hora actual
 	time_t now = time(0);
 	struct tm *tlocal = localtime(& now );
-	char stnow[19];
-	strftime(stnow, 19, "%d/%m/%y %H:%M:%S", tlocal);
+	char stnow[25];
+	strftime(stnow, 25, "%d/%m/%y %H:%M:%S", tlocal);
 	char fuenteLog[20];
 	switch (ClienteRecepcionistaMaquina) {
 		case 0:
@@ -522,7 +522,7 @@ void writeLogMessage (int ClienteRecepcionistaMaquina, int ID, char *msg) {
 			break;
 	}
 	// Escribimos en el log
-	logFile = fopen("registroTiempos.log", "a+");
+	logFile = fopen("registroTiempos.log", "a");
 	fprintf(logFile, "[ %s ]: [%s]: %s\n", stnow, fuenteLog, msg);
 	fclose(logFile);    
     pthread_mutex_unlock(&mutexLog);
