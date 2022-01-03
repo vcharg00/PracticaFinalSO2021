@@ -219,8 +219,7 @@ void *accionesCliente(void *arg){
 	srand(gettid());
 	
 	printf("El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
-	sprintf(msgCliente, "El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
-	writeLogMessage(0, id, msgCliente);
+	writeLogMessage(0, id, "El cliente ha entrado en el hotel");
 	sleep(3);
 
 	aleatorio = calculaAleatorios(1,100);
@@ -240,8 +239,7 @@ void *accionesCliente(void *arg){
 				pthread_mutex_unlock(&mutexColaClientes);
 				sleep(6);
 				printf("El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
-				sprintf(msgCliente, "El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
-				writeLogMessage(0, id, msgCliente);
+				writeLogMessage(0, id, "El cliente se ha atendido a si mismo en la maquina y ha tardado 6 seg");
 				pthread_mutex_lock(&mutexColaClientes);
 				clientes[posicion].atendido = 2;
 				pthread_mutex_unlock(&mutexColaClientes);
@@ -271,14 +269,14 @@ void *accionesCliente(void *arg){
 				printf("El cliente con id %d se cansa de esperar y decide ir a las maquinas de checking\n",id);
 			}else if(aleatorio > 20 &&(aleatorio <= 30)){	//Se cansa de esperar y abandona el hotel
 					printf("El cliente con id %d se ha cansado de esperar y abandona el hotel\n",id);
-					writeLogMessage(0, id, "El cliente con id se ha ido al baño y abandona el hotel");
+					writeLogMessage(0, id, "El cliente se ha ido al baño y abandona el hotel");
 					eliminarCliente(id);
 					pthread_exit(NULL);
 			}else{
 				aleatorio = calculaAleatorios(1,100);
 				if(aleatorio <=5){		//Se va al baño y abanadona el hotel
 					printf("El cliente con id %d se ha ido al baño y abandona el hotel\n",id);
-					writeLogMessage(0, id, "El cliente con id se ha ido al baño y abandona el hotel");
+					writeLogMessage(0, id, "El cliente se ha ido al baño y abandona el hotel");
 					eliminarCliente(id);
 					pthread_exit(NULL);
 				}
@@ -302,7 +300,7 @@ void *accionesCliente(void *arg){
 				writeLogMessage(0, id, "El cliente con id está preparado para coger el ascensor");
 				while(ascensorFuncionando!=0){	//Mientras el ascensor esté lleno o este funcionando se queda esperando.	
 					printf("El cliente con id %d está esperando al acensor porque está lleno\n",id);
-					writeLogMessage(0, id, "El cliente con id está esperando al acensor porque está lleno");	
+					writeLogMessage(0, id, "El cliente está esperando al acensor porque está lleno");	
 					sleep(3);
 				}
 				
@@ -344,7 +342,7 @@ void *accionesCliente(void *arg){
 			}			
 		}else{
 			printf("El cliente con id %d ha sido atendido, no espera al ascensor y se va a su habitación\n",id);
-			writeLogMessage(0, id, "El cliente con id ha sido atendido, no espera al ascensor y se va a su habitación");	
+			writeLogMessage(0, id, "El cliente ha sido atendido, no espera al ascensor y se va a su habitación");	
 			eliminarCliente(id);
 			pthread_exit(NULL);					
 		}
@@ -445,7 +443,7 @@ void *accionesRecepcionista(void *arg){
 	    			
 	    			printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
 	    			sprintf(msgRecepcionista, "El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 	    			sleep(1);
 		    		pthread_mutex_lock(&mutexColaClientes);
 		    		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
@@ -457,12 +455,12 @@ void *accionesRecepcionista(void *arg){
 		     		
 		     		printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
 		     		sprintf(msgRecepcionista, "El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		     		sleep(1);
 		   		pthread_mutex_lock(&mutexColaClientes);
 		     		clientes[posicionCliente].atendido = 2;		//Acaba de ser atendido el cliente
 		     		sprintf(msgRecepcionista, "El recepcionista %d ha termiado la atencion.\n",tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		    		pthread_mutex_unlock(&mutexColaClientes);
 
 		    	}else{	//10% no tienen el pasaporte vacunal.
@@ -477,10 +475,10 @@ void *accionesRecepcionista(void *arg){
 		    	if(contadorClientesAtendidos==5){	//al llegar a 5 el recepcionista descansa
 		    		printf("El recepcionista %d va a descansar 5 segundos\n",tipoRecepcionista);
 		    		sprintf(msgRecepcionista, "El recepcionista %d inicia su descanso\n",tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		    		sleep(5);
 		    		sprintf(msgRecepcionista, "El recepcionista %d termina su descanso\n",tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		    		contadorClientesAtendidos = 0;
 		    	}
 		    	sleep(1);
