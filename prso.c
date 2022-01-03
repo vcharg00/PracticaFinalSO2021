@@ -62,7 +62,7 @@ void *accionesCliente(void *arg);
 void *accionesRecepcionista(void *arg);
 void *ascensor(void *arg);
 
-void writeLogMessage(int ClienteRecepcionistaMaquina, int ID, char *msg);
+void writeLogMessage(int ClienteRecepcionistaMaquina, char *id, char *msg);
 
 int main(int argc, char* argv[]){
 	
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]){
 	int i;
 
 	//Mensajes para los logs
-	char msg[100];
+	char msg[130];
 
 	//Sobreescribir logs
 	remove("registroTiempos.log");
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]){
 			if((contadorClientes==0)&&(ascensorFuncionando==0)){
 				fin=2;		//con fin=2 se termina todo el programa.
 				printf("Se ha cerrado el hotel.\n");
-				sprintf(msgFinal, "Se ha cerrado el hotel.");
+				sprintf(msg, "Se ha cerrado el hotel.");
 				writeLogMessage(2, 0, msg);
 				sleep(5);
 				return 0;
@@ -502,7 +502,7 @@ void *accionesRecepcionista(void *arg){
 
 }
 
-void writeLogMessage (char *id, char *msg) {
+void writeLogMessage (int ClienteRecepcionistaMaquina, char *id, char *msg) {
     pthread_mutex_lock(&mutexLog);
 	// Calculamos la hora actual
 	time_t now = time(0);
@@ -512,7 +512,7 @@ void writeLogMessage (char *id, char *msg) {
 	char fuenteLog[20];
 	switch (ClienteRecepcionistaMaquina) {
 		case 0:
-			sprintf(fuenteLog, "%s %d", "Cliente", ID);
+			sprintf(fuenteLog, "%s %d", "Cliente", *id);
 			break;
 		case 1:
 			sprintf(fuenteLog, "%s %d", "Recepcionista");
@@ -575,4 +575,3 @@ int calculaAleatorios(int min, int max){
 pid_t gettid(void){
     return syscall(__NR_gettid);
 }
-
