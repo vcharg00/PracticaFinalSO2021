@@ -62,7 +62,7 @@ void *accionesCliente(void *arg);
 void *accionesRecepcionista(void *arg);
 void *ascensor(void *arg);
 
-void writeLogMessage(int ClienteRecepcionistaMaquina, char *id, char *msg);
+void writeLogMessage(int ClienteRecepcionistaMaquina, int id, char *msg);
 
 int main(int argc, char* argv[]){
 	
@@ -400,7 +400,7 @@ void *accionesRecepcionista(void *arg){
 	int aleatorio;
 	int contadorClientesAtendidos = 0;
 	
-	char msgRecepcionista[100];
+	char msgRecepcionista[130];
 
 	if(tipoRecepcionista==0){
 		printf("recepcionista %d atiende a clientes no vip.\n",tipoRecepcionista);
@@ -496,20 +496,20 @@ void *accionesRecepcionista(void *arg){
 
 }
 
-void writeLogMessage (int ClienteRecepcionistaMaquina, char *id, char *msg) {
+void writeLogMessage (int ClienteRecepcionistaMaquina, int id, char *msg) {
     pthread_mutex_lock(&mutexLog);
 	// Calculamos la hora actual
 	time_t now = time(0);
-	struct tm *tlocal = localtime(& now );
+	struct tm *tlocal = localtime(&now);
 	char stnow[25];
 	strftime(stnow, 25, "%d/%m/%y %H:%M:%S", tlocal);
 	char fuenteLog[20];
 	switch (ClienteRecepcionistaMaquina) {
 		case 0:
-			sprintf(fuenteLog, "%s %d", "Cliente", *id);
+			sprintf(fuenteLog, "%s %d", "Cliente", id);
 			break;
 		case 1:
-			sprintf(fuenteLog, "%s %d", "Recepcionista");
+			sprintf(fuenteLog, "%s %d", "Recepcionista", id);
 			break;
 		case 2:
 			sprintf(fuenteLog, "Maquina");
