@@ -153,6 +153,7 @@ void nuevoCliente(int sig){
 		contadorIDClientes++;
 		clientes[contadorClientes].id = contadorIDClientes;
 		
+		clientes[contadorClientes].atendido = -1;		//Tipo no VIP
 		if(sig == SIGUSR1){
 			clientes[contadorClientes].tipo = 0;		//Tipo no VIP
 		}else if(sig == SIGUSR2){
@@ -255,11 +256,11 @@ void *accionesCliente(void *arg){
 	srand(gettid());
 	while(1){
 		atendido = comprobarAtendido(id);
-		if(atendido==0){
+		if(atendido==-1){
 			aleatorio = calculaAleatorios(1,100);
 			if((aleatorio <= 10)&&(entrarMaquina==0)||(entrarMaquina==2)){	//10% de los clientes decide ir automaticamente a las maquinas de checking
+
 				cambiarChecking(id,1);
-				
 				while(condMaquinas!=1){
 					printf("El cliente con id %d está listo para entrar a las maquinas de checking.\n",id);
 					maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
@@ -274,17 +275,23 @@ void *accionesCliente(void *arg){
 						
 						sleep(6);
 						printf("El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
+						pthread_mutex_lock(&mutexMaquinas);
+						maquinasCheck[maquinaLibre] = 0;	//Pongo la maquina como libre 
+						pthread_mutex_unlock(&mutexMaquinas);
+						
 						writeLogMessage(0, id, "El cliente se ha atendido a si mismo en la maquina y ha tardado 6 seg");
 						cambiarAtendido(id,2);
 						condMaquinas=1;
 						entrarMaquina=1;
+					
+
 
 					}else{	//si no hay maquinas libres
 						sleep(3);
 						aleatorio = calculaAleatorios(1,100);
 						if(aleatorio <= 50){
 							printf("El cliente con Id %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal.\n",id);
-							condMaquinas=1;
+
 							entrarMaquina=1;
 							cambiarChecking(id,0);
 							
@@ -419,11 +426,11 @@ int clienteMayorTiempoEsperando(int tipoRecepcionista){
 	pthread_mutex_lock(&mutexColaClientes);
 	while (posicion == -1 && i < maximoClientes) {
 		if((tipoRecepcionista==2)&&(clientes[i].tipo==1)){ 	//si el recepcionista es vip y el cliente tambien entra aquí.
-			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
+			if((clientes[i].id!=0) && (clientes[i].atendido == -1) && (clientes[i].checking==0)){
 				posicion = i;
 			}
 		}else if(((clientes[i].tipo==0)&&(tipoRecepcionista==0))||((clientes[i].tipo==0)&&(tipoRecepcionista==1))){ //si el recepcionista es no vip y el cliente tambien, entra aquí.
-			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
+			if((clientes[i].id!=0) && (clientes[i].atendido == -1) && (clientes[i].checking==0)){
 				posicion = i;
 			}
 		}
