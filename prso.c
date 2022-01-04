@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
   	}
 
   	/*Lista de recepcionistas*/
-  	pthread_t recepcionista1, recepcionista2, recepcionista3;
+  	pthread_t recepcionista1, recepcionista2, recepcionista3 , ascensorHotel;
   	
 
   	/*Máquinas de checkIn*/
@@ -125,6 +125,7 @@ int main(int argc, char* argv[]){
 	pthread_create(&recepcionista1,NULL,accionesRecepcionista,&noVip1);
 	pthread_create(&recepcionista2,NULL,accionesRecepcionista,&noVip2);
 	pthread_create(&recepcionista3,NULL,accionesRecepcionista,&vip);
+	pthread_create(&ascensorHotel,NULL,ascensor,NULL);
 	
 	printf("pid al que enviar las señales: %d\n",getpid());
 
@@ -152,8 +153,7 @@ void nuevoCliente(int sig){
 		
 		contadorIDClientes++;
 		clientes[contadorClientes].id = contadorIDClientes;
-		
-		clientes[contadorClientes].atendido = -1;		//Tipo no VIP
+				
 		if(sig == SIGUSR1){
 			clientes[contadorClientes].tipo = 0;		//Tipo no VIP
 		}else if(sig == SIGUSR2){
@@ -256,7 +256,7 @@ void *accionesCliente(void *arg){
 	srand(gettid());
 	while(1){
 		atendido = comprobarAtendido(id);
-		if(atendido==-1){
+		if(atendido==0){
 			aleatorio = calculaAleatorios(1,100);
 			if((aleatorio <= 10)&&(entrarMaquina==0)||(entrarMaquina==2)){	//10% de los clientes decide ir automaticamente a las maquinas de checking
 
@@ -284,14 +284,12 @@ void *accionesCliente(void *arg){
 						condMaquinas=1;
 						entrarMaquina=1;
 					
-
-
 					}else{	//si no hay maquinas libres
 						sleep(3);
 						aleatorio = calculaAleatorios(1,100);
 						if(aleatorio <= 50){
 							printf("El cliente con Id %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal.\n",id);
-
+							condMaquinas=1;
 							entrarMaquina=1;
 							cambiarChecking(id,0);
 							
@@ -311,6 +309,7 @@ void *accionesCliente(void *arg){
 				if(aleatorio <= 50){	//Se cansan de esperar y se van a las maquinas de checking
 					printf("El cliente con id %d se cansa de esperar y decide ir a las maquinas de checking.\n",id);
 					entrarMaquina=2;
+					condMaquinas=0;
 					cambiarChecking(id,1);
 					sleep(1);
 				}else if(aleatorio > 50 &&(aleatorio <= 60)){	//Se cansa de esperar y abandona el hotel
@@ -327,7 +326,7 @@ void *accionesCliente(void *arg){
 						pthread_exit(NULL);
 					}
 				}
-				
+				cambiarChecking(id,0);
 				sleep(3);	//Si no ha sido atendido duerme 3 segundos y vuelve a hacer todas las comprobaciones.
 					
 				
@@ -336,7 +335,7 @@ void *accionesCliente(void *arg){
 			sleep(2);
 		}else if(atendido == 2){		//PUNTO 6
 			aleatorio = calculaAleatorios(1,100);
-			if(aleatorio <=-5){			// El cliente espera al ascensor
+			if(aleatorio <=90){			// El cliente espera al ascensor
 				if(fin != 1){
 					pthread_mutex_lock(&mutexColaClientes);
 					clientes[posicion].ascensor = 1;
@@ -348,16 +347,18 @@ void *accionesCliente(void *arg){
 						writeLogMessage(0, id, "El cliente está esperando al acensor porque está lleno");	
 						sleep(3);
 					}
-					
+					printf("prueba 4\n");
 					pthread_mutex_lock(&mutexAscensor);
 					clientesAscensor[contadorAscensor]=id;	
 					contadorAscensor++;
+					printf("prueba 3\n");
 					
 					pthread_cond_signal(&condAscensor);
-					pthread_cond_wait(&condAscensor,&mutexAscensor); //si todo va bien aqui hay 5 hilos esperando +1 que es el que envia el signal (6);
+					pthread_cond_wait(&condAscensor,&mutexAscensor); //si todo va bien aqui hay 6 hilos esperando.
 					
 					if(clientesAscensor[6]==id){
 						printf("los clientes van a salir del ascensor empezando por el ultimo que entró\n");
+						sleep(1);
 					}
 					//ejemplo sale el hilo con id 4
 					for(i=5;i>=0;i--){
@@ -376,6 +377,7 @@ void *accionesCliente(void *arg){
 								pthread_exit(NULL);
 							}
 						}
+						sleep(1);
 					}
 					pthread_mutex_unlock(&mutexAscensor);
 					
@@ -403,12 +405,14 @@ void *accionesCliente(void *arg){
 
 }
 void *ascensor(void *arg){
-	
+	printf("prueba 2\n");
 	while(fin!=2){
 		pthread_mutex_lock(&mutexAscensor);
-		while(contadorAscensor<6){
+		printf("prueba 1\n");
+		while(contadorAscensor<=6){
 			printf("el ascensor todavia no se puede usar porque no está lleno\n");
 			pthread_cond_wait(&condAscensor,&mutexAscensor);
+			printf("prueba 5\n");
 		}
 		printf("hay 6 clientes en el ascensor el ascensor procede a cerrar sus puertas y a subir\n");
 		sleep(calculaAleatorios(3,6));
@@ -416,7 +420,11 @@ void *ascensor(void *arg){
 		pthread_cond_signal(&condAscensor);
 		pthread_mutex_unlock(&mutexAscensor);
 		
+		
+		printf("prueba 6\n");
 	}
+	
+	pthread_exit(NULL);
 }
 int clienteMayorTiempoEsperando(int tipoRecepcionista){
 	int posicion = -1;
@@ -426,11 +434,11 @@ int clienteMayorTiempoEsperando(int tipoRecepcionista){
 	pthread_mutex_lock(&mutexColaClientes);
 	while (posicion == -1 && i < maximoClientes) {
 		if((tipoRecepcionista==2)&&(clientes[i].tipo==1)){ 	//si el recepcionista es vip y el cliente tambien entra aquí.
-			if((clientes[i].id!=0) && (clientes[i].atendido == -1) && (clientes[i].checking==0)){
+			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
 				posicion = i;
 			}
 		}else if(((clientes[i].tipo==0)&&(tipoRecepcionista==0))||((clientes[i].tipo==0)&&(tipoRecepcionista==1))){ //si el recepcionista es no vip y el cliente tambien, entra aquí.
-			if((clientes[i].id!=0) && (clientes[i].atendido == -1) && (clientes[i].checking==0)){
+			if((clientes[i].id!=0) && (clientes[i].atendido == 0) && (clientes[i].checking==0)){
 				posicion = i;
 			}
 		}
