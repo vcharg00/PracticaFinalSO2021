@@ -252,6 +252,7 @@ void *accionesCliente(void *arg){
 	int entrarMaquina=0;	//si es 0 no has entrado a maquinas y puedes hacerlo, si es 1 has entrado pero no puedes volver a entrar si es 2 entras directamente.
 
 	char msgCliente[100];
+	char msgMaquina[100];
 	
 	printf("El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
 	writeLogMessage(0, id, "El cliente ha entrado en el hotel");
@@ -281,7 +282,8 @@ void *accionesCliente(void *arg){
 						maquinasCheck[maquinaLibre] = 0;	//Pongo la maquina como libre 
 						pthread_mutex_unlock(&mutexMaquinas);
 						
-						writeLogMessage(0, id, "El cliente se ha atendido a si mismo en la maquina y ha tardado 6 seg");
+						sprintf(msgMaquina, "El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
+						writeLogMessage(2, 0, msgMaquina);
 						cambiarAtendido(id,2);
 						condMaquinas=1;
 						entrarMaquina=1;
@@ -504,16 +506,16 @@ void *accionesRecepcionista(void *arg){
 		    	}else{	//10% no tienen el pasaporte vacunal.
 		       		printf("El cliente %d ha sido atendido por el recepcionista %d, pero no tiene el pasaporte vacunal asique se marcha\n",id,tipoRecepcionista);  
 		       		sprintf(msgRecepcionista, "El cliente %d ha sido atendido por el recepcionista %d, pero no tiene el pasaporte vacunal asique se marcha\n",id,tipoRecepcionista);
-				writeLogMessage(1, 0, msgRecepcionista);
+					writeLogMessage(1, id, msgRecepcionista);
 		       		sleep((calculaAleatorios(6,10)));	
 		       		cambiarAtendido(id,3);
 		    	}
 		    	if(contadorClientesAtendidos==5){	//al llegar a 5 el recepcionista descansa
 		    		printf("El recepcionista %d va a descansar 5 segundos\n",tipoRecepcionista);
-		    		sprintf(msgRecepcionista, "El recepcionista %d inicia su descanso\n",tipoRecepcionista);
+		    		sprintf(msgRecepcionista, "El recepcionista %d va a descansar 5 segundos\n",tipoRecepcionista);
 				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		    		sleep(5);
-		    		sprintf(msgRecepcionista, "El recepcionista %d termina su descanso\n",tipoRecepcionista);
+		    		sprintf(msgRecepcionista, "El recepcionista %d termina su descanso",tipoRecepcionista);
 				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		    		contadorClientesAtendidos = 0;
 		    	}
