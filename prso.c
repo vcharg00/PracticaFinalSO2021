@@ -255,7 +255,8 @@ void *accionesCliente(void *arg){
 	char msgMaquina[100];
 	
 	printf("El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
-	writeLogMessage(0, id, "El cliente ha entrado en el hotel");
+	sprintf(msgCliente, "El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
+	writeLogMessage(0, id, msgCliente);
 	sleep(3);
 	srand(gettid());
 	while(1){
@@ -269,6 +270,8 @@ void *accionesCliente(void *arg){
 					maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
 					if(maquinaLibre != -1){			//si la maquina esta libre, es decir cualquier posicion distinta de -1...				
 						printf("El cliente con id %d entra en la maquina %d para atenderse a si mismo\n",id,maquinaLibre);
+						sprintf(msgMaquina, "El cliente con id %d entra en la maquina %d para atenderse a si mismo\n",id,maquinaLibre);
+						writeLogMessage(2, 0, msgMaquina);
 						pthread_mutex_lock(&mutexMaquinas);
 						maquinasCheck[maquinaLibre] = 1;	//Pongo la maquina como ocupada 
 						pthread_mutex_unlock(&mutexMaquinas);
@@ -293,6 +296,8 @@ void *accionesCliente(void *arg){
 						aleatorio = calculaAleatorios(1,100);
 						if(aleatorio <= 50){
 							printf("El cliente con Id %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal.\n",id);
+							sprintf(msgMaquina, "El cliente con Id %d se cansa de esperar en la zona de maquinas y decide ir a la recepcion normal.\n",id);
+							writeLogMessage(2, 0, msgMaquina);
 							condMaquinas=1;
 							entrarMaquina=1;
 							cambiarChecking(id,0);
@@ -307,20 +312,24 @@ void *accionesCliente(void *arg){
 				aleatorio = calculaAleatorios(1,100);
 				if(aleatorio <= 50){	//Se cansan de esperar y se van a las maquinas de checking
 					printf("El cliente con id %d se cansa de esperar y decide ir a las maquinas de checking.\n",id);
+					sprintf(msgCliente, "El cliente con id %d se cansa de esperar y decide ir a las maquinas de checking.\n",id);
+					writeLogMessage(0, id, msgCliente);
 					entrarMaquina=2;
 					condMaquinas=0;
 					cambiarChecking(id,1);
 					sleep(1);
 				}else if(aleatorio > 50 &&(aleatorio <= 60)){	//Se cansa de esperar y abandona el hotel
 						printf("El cliente con id %d se ha cansado de esperar y abandona el hotel\n",id);
-						writeLogMessage(0, id, "El cliente se ha ido al baño y abandona el hotel");
+						sprintf(msgCliente, "El cliente con id %d se ha cansado de esperar y abandona el hotel\n",id);
+						writeLogMessage(0, id, msgCliente);
 						eliminarCliente(id);
 						pthread_exit(NULL);
 				}else{
 					aleatorio = calculaAleatorios(1,100);
 					if(aleatorio <=5){		//Se va al baño y abanadona el hotel
 						printf("El cliente con id %d se ha ido al baño y abandona el hotel\n",id);
-						writeLogMessage(0, id, "El cliente se ha ido al baño y abandona el hotel");
+						sprintf(msgCliente, "El cliente con id %d se ha ido al baño y abandona el hotel\n",id);
+						writeLogMessage(0, id, msgCliente);
 						eliminarCliente(id);
 						pthread_exit(NULL);
 					}
@@ -338,11 +347,13 @@ void *accionesCliente(void *arg){
 					clientes[posicion].ascensor = 1;
 					pthread_mutex_unlock(&mutexColaClientes);
 					printf("El cliente con id %d está preparado para coger el ascensor\n",id);
-					writeLogMessage(0, id, "El cliente está preparado para coger el ascensor");
+					sprintf(msgCliente, "El cliente con id %d está preparado para coger el ascensor\n",id);
+					writeLogMessage(0, id, msgCliente);
 					pthread_mutex_lock(&mutexAscensor);
 					while(ascensorFuncionando!=0){	//Mientras el ascensor esté lleno o este funcionando se queda esperando.	
 						printf("El cliente con id %d está esperando al acensor porque está lleno\n",id);
-						writeLogMessage(0, id, "El cliente está esperando al acensor porque está lleno");	
+						sprintf(msgCliente, "El cliente con id %d está esperando al acensor porque está lleno\n",id);
+						writeLogMessage(0, id, msgCliente);
 						sleep(3);
 					}
 					pthread_mutex_unlock(&mutexAscensor);
@@ -369,7 +380,8 @@ void *accionesCliente(void *arg){
 								cambiarAtendido(id,3);
 							}else{
 								printf("Sale el cliente %d del ascensor y se marcha.\n",clientesAscensor[i]);
-								writeLogMessage(0, id, "Sale el cliente del ascensor y se marcha.");	
+								sprintf(msgCliente, "Sale el cliente %d del ascensor y se marcha.\n",clientesAscensor[i]);
+								writeLogMessage(0, id, msgCliente);	
 								cambiarAtendido(id,3);
 							}
 						}
@@ -378,17 +390,21 @@ void *accionesCliente(void *arg){
 					pthread_mutex_unlock(&mutexAscensor);
 				}else{
 					printf("El cliente con id %d no espera al ascensor porque se deja de atender a clientes.\n",id);
+					sprintf(msgCliente, "El cliente con id %d no espera al ascensor porque se deja de atender a clientes.\n",id);
+					writeLogMessage(0, id, msgCliente);	
 					cambiarAtendido(id,3);		
 				}			
 			}else{
 				printf("El cliente con id %d ha sido atendido, no espera al ascensor y se va a su habitación\n",id);
-				writeLogMessage(0, id, "El cliente ha sido atendido, no espera al ascensor y se va a su habitación");	
+				sprintf(msgCliente, "El cliente con id %d ha sido atendido, no espera al ascensor y se va a su habitación\n",id);
+				writeLogMessage(0, id, msgCliente);	
 				cambiarAtendido(id,3);					
 			}
 
 		}else if(atendido == 3){	//si atendido es igual a 3 eliminamos al cliente
-			printf("el cliente %d abandona el hotel.\n",id);
-			//log
+			printf("El cliente %d abandona el hotel.\n",id);
+			sprintf(msgCliente, "El cliente %d abandona el hotel.\n",id);
+			writeLogMessage(0, id, msgCliente);	
 			eliminarCliente(id);
 			pthread_exit(NULL);
 		}
@@ -492,6 +508,8 @@ void *accionesRecepcionista(void *arg){
 		    		
 		    	}else if(aleatorio<= 90){	//10%mal identificados.
 		      		printf("El cliente %d no se ha identificado correctamente le atienden mas despacio\n",id);
+		      		sprintf(msgRecepcionista, "El cliente %d no se ha identificado correctamente le atienden mas despacio\n",id);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 		     		sleep((calculaAleatorios(2,6)));
 		     		
 		     		printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
@@ -590,9 +608,12 @@ void terminar(int sig){
 	signal(SIGUSR1, SIG_IGN);
 	signal(SIGUSR2, SIG_IGN);
 	signal(SIGINT, SIG_IGN);
+	char msgMaquina[160];
 	fin=1;
 	pthread_cond_signal(&condAscensor);
 	printf("\nse va a dejar de atender a nuevos clientes, solo se atenderá a aquellos que estén en cola o esperando al ascensor.\n");
+	sprintf(msgMaquina, "\nse va a dejar de atender a nuevos clientes, solo se atenderá a aquellos que estén en cola o esperando al ascensor.\n");
+	writeLogMessage(2, 0, msgMaquina);
 }
 /*Funcion que calcula aleatorios.*/
 int calculaAleatorios(int min, int max){
