@@ -341,7 +341,7 @@ void *accionesCliente(void *arg){
 			sleep(2);
 		}else if(atendido == 2){		//PUNTO 6
 			aleatorio = calculaAleatorios(1,100);
-			if(aleatorio <=90){			// El cliente espera al ascensor
+			if(aleatorio <=30){			// El cliente espera al ascensor
 				if(fin != 1){
 					pthread_mutex_lock(&mutexColaClientes);
 					clientes[posicion].ascensor = 1;
@@ -350,11 +350,13 @@ void *accionesCliente(void *arg){
 					sprintf(msgCliente, "El cliente con id %d está preparado para coger el ascensor\n",id);
 					writeLogMessage(0, id, msgCliente);
 					pthread_mutex_lock(&mutexAscensor);
-					while(ascensorFuncionando!=0){	//Mientras el ascensor esté lleno o este funcionando se queda esperando.	
+					while(ascensorFuncionando!=0){	//Mientras el ascensor esté lleno o este funcionando se queda esperando.					
+						pthread_mutex_unlock(&mutexAscensor);
 						printf("El cliente con id %d está esperando al acensor porque está lleno\n",id);
 						sprintf(msgCliente, "El cliente con id %d está esperando al acensor porque está lleno\n",id);
 						writeLogMessage(0, id, msgCliente);
 						sleep(3);
+						pthread_mutex_lock(&mutexAscensor);
 					}
 					pthread_mutex_unlock(&mutexAscensor);
 					
