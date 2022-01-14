@@ -151,6 +151,7 @@ void nuevoCliente(int sig){
 	signal(SIGUSR1, nuevoCliente);
 	signal(SIGUSR2, nuevoCliente);
 	int posicion=0;
+	char msg[100];
 	pthread_mutex_lock(&mutexColaClientes);
 	
 	if(contadorClientes<maximoClientes){
@@ -170,6 +171,8 @@ void nuevoCliente(int sig){
 		
 	}else{
 		printf("El hotel Sokovia está lleno.\n");
+		sprintf(msg, "El hotel Sokovia está lleno.\n");
+		writeLogMessage(2, 0, msg);
 	}
 	pthread_mutex_unlock(&mutexColaClientes);
 
@@ -253,6 +256,7 @@ void *accionesCliente(void *arg){
 
 	char msgCliente[100];
 	char msgMaquina[100];
+	char msgAscensor[100];
 	
 	printf("El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
 	sprintf(msgCliente, "El cliente %d de tipo %d ha entrado en el hotel.\n",id,tipo);
@@ -267,6 +271,9 @@ void *accionesCliente(void *arg){
 				cambiarChecking(id,1);
 				while(condMaquinas!=1){
 					printf("El cliente con id %d está listo para entrar a las maquinas de checking.\n",id);
+					sprintf(msgMaquina, "El cliente con id %d está listo para entrar a las maquinas de checking.\n",id);
+						writeLogMessage(2, 0, msgMaquina);
+					
 					maquinaLibre = maquinasLibres();		//guardo en esta variable la posicion de la maquina 
 					if(maquinaLibre != -1){			//si la maquina esta libre, es decir cualquier posicion distinta de -1...				
 						printf("El cliente con id %d entra en la maquina %d para atenderse a si mismo\n",id,maquinaLibre);
@@ -280,11 +287,12 @@ void *accionesCliente(void *arg){
 						/*el cliente se atiende a si mismo, y simula situacion durmiendo 6 segs*/
 						
 						sleep(6);
-						printf("El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
+						
 						pthread_mutex_lock(&mutexMaquinas);
 						maquinasCheck[maquinaLibre] = 0;	//Pongo la maquina como libre 
 						pthread_mutex_unlock(&mutexMaquinas);
 						
+						printf("El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
 						sprintf(msgMaquina, "El cliente con id %d se ha atendido a si mismo en la maquina %d y ha tardado 6 seg\n",id,maquinaLibre);
 						writeLogMessage(2, 0, msgMaquina);
 						cambiarAtendido(id,2);
@@ -368,6 +376,8 @@ void *accionesCliente(void *arg){
 						pthread_cond_signal(&condAscensor);
 					}else{
 						printf("el ascensor todavia no se puede usar porque no está lleno\n");
+						sprintf(msgAscensor, "el ascensor todavia no se puede usar porque no está lleno\n");
+						writeLogMessage(3, 0, msgAscensor);
 					}
 					pthread_cond_wait(&condClientes,&mutexAscensor);
 					
@@ -377,6 +387,8 @@ void *accionesCliente(void *arg){
 							if(i==0){
 								sleep(3);
 								printf("el cliente %d es el ultimo en salir y libera el ascensor\n",clientesAscensor[i]);
+								sprintf(msgCliente, "el cliente %d es el ultimo en salir y libera el ascensor\n",clientesAscensor[i]);
+								writeLogMessage(0, id, msgCliente);
 								ascensorFuncionando=0;
 								contadorAscensor=-1;
 								cambiarAtendido(id,3);
@@ -414,13 +426,18 @@ void *accionesCliente(void *arg){
 }
 void *ascensor(void *arg){
 	int i;
+	char msgAscensor[100];
 	while(fin!=2){
 		pthread_mutex_lock(&mutexAscensor);
 		pthread_cond_wait(&condAscensor,&mutexAscensor);
 		ascensorFuncionando=1;
 		printf("\nhay 6 clientes en el ascensor el ascensor procede a cerrar sus puertas y a subir\n");
+		sprintf(msgAscensor, "hay 6 clientes en el ascensor el ascensor procede a cerrar sus puertas y a subir\n");
+		writeLogMessage(3, 0, msgAscensor);
 		sleep(calculaAleatorios(3,6));
 		printf("los clientes van a salir del ascensor empezando por el ultimo que entró\n");
+		sprintf(msgAscensor, "los clientes van a salir del ascensor empezando por el ultimo que entró\n");
+		writeLogMessage(3, 0, msgAscensor);
 		for(i=0;i<=contadorAscensor;i++){
 			pthread_cond_signal(&condClientes);
 		}
@@ -485,10 +502,16 @@ void *accionesRecepcionista(void *arg){
 	    		
 	    		if(tipoRecepcionista==0){
 				printf("el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				sprintf(msgRecepcionista, "el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 			}else if(tipoRecepcionista==1){
 				printf("el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				sprintf(msgRecepcionista, "el cliente %d es atendido en la cola no vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 			}else if(tipoRecepcionista==2){
 				printf("el cliente %d es atendido en la cola vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				sprintf(msgRecepcionista, "el cliente %d es atendido en la cola vip por el recepcionista %d.\n",id,tipoRecepcionista);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 			}
 			
 			if((tipoRecepcionista==0)||(tipoRecepcionista==1)){
@@ -499,6 +522,8 @@ void *accionesRecepcionista(void *arg){
 			
 			if(aleatorio <=80){ //80% todo en regla.
 	    			printf("El cliente %d tiene todo en regla\n",id);
+		      		sprintf(msgRecepcionista, "El cliente %d tiene todo en regla\n",id);
+				writeLogMessage(1, tipoRecepcionista, msgRecepcionista);
 	    			sleep((calculaAleatorios(1,4)));
 	    			
 	    			printf("El cliente %d ha sido atendido por el recepcionista %d\n",id,tipoRecepcionista);
@@ -526,7 +551,7 @@ void *accionesRecepcionista(void *arg){
 		    	}else{	//10% no tienen el pasaporte vacunal.
 		       		printf("El cliente %d ha sido atendido por el recepcionista %d, pero no tiene el pasaporte vacunal asique se marcha\n",id,tipoRecepcionista);  
 		       		sprintf(msgRecepcionista, "El cliente %d ha sido atendido por el recepcionista %d, pero no tiene el pasaporte vacunal asique se marcha\n",id,tipoRecepcionista);
-					writeLogMessage(1, id, msgRecepcionista);
+				writeLogMessage(1, id, msgRecepcionista);
 		       		sleep((calculaAleatorios(6,10)));	
 		       		cambiarAtendido(id,3);
 		    	}
@@ -567,10 +592,13 @@ void writeLogMessage (int clienteRecepcionistaMaquina, int id, char *msg) {
 		case 2:
 			sprintf(fuenteLog, "Maquina");
 			break;
+		case 3: 
+			sprintf(fuenteLog, "Ascensor");
+			break;
 	}
 	// Escribimos en el log
 	logFile = fopen("registroTiempos.log", "a");
-	fprintf(logFile, "[ %s ]: [%s]: %s\n", stnow, fuenteLog, msg);
+	fprintf(logFile, "[%s]: [%s]: %s\n", stnow, fuenteLog, msg);
 	fclose(logFile);    
     pthread_mutex_unlock(&mutexLog);
 }
