@@ -12,7 +12,8 @@
 
 /* Declaraciones globales */
 
-#define maximoClientes 20
+int maximoClientes = 20;
+int numeroMaquinas = 5;
 
 /*Semaforos y variables condicion*/
 pthread_mutex_t mutexLog;
@@ -52,6 +53,7 @@ FILE *logFile;
 /* Declaracion de las funciones */
 void nuevoCliente(int sig);
 void terminar(int sig);
+void cambioValores(int sig);
 
 int calculaAleatorios(int min, int max);
 int clienteMayorTiempoEsperando(int tipoRecepcionista);
@@ -68,13 +70,54 @@ void *ascensor(void *arg);
 
 void writeLogMessage(int clienteRecepcionistaMaquina, int id, char *msg);
 /*Funcion principal del programa*/
-int main(int argc, char* argv[]){
+int main(int argc, char const *argv[]){
 	
 	int vip = 2;	//vip
 	int noVip1 = 0; //no vip
 	int noVip2 = 1;	//no vip
 	int i;
+	
+	
 
+
+	/*Comprobación de numero de clientes introducidos por parametro es correcto*/
+	switch(argc){
+		case 1:
+		/*Si no se introduce ninguno, se utiliza el numero de clientes de por defecto siendo en este caso 15*/
+		printf("No se ha introducido un numero de clientes por lo que se usara el que esta por defecto.\n");
+		break;
+		
+		case 2:
+		/*Si el numero es correcto, se cambia*/
+		if (atoi(argv[1]) > 0){
+			maximoClientes = atoi(argv[1]);
+		}else{
+			printf("El valor que se ha introducido como numero de clientes es erroneo por lo que se usara el que esta por defecto.\n");
+		}
+		break;
+		
+		case 3:
+		/*Si se introducen dos valores por linea de comandos y son correctos*/
+		if (atoi(argv[1]) > 0){
+			maximoClientes = atoi(argv[1]);
+		}else{
+			printf("El valor que se ha introducido como numero de clientes es erroneo por lo que se usara el que esta por defecto.\n");
+		}
+		if (atoi(argv[2]) > 0){
+			numeroMaquinas = atoi(argv[2]);
+			
+		}else{
+			printf("El valor que se ha introducido como numero de maquinas de autochekin es erroneo por lo que se usara el que esta por defecto.\n");
+		}
+		break;
+		
+		default:
+		/*Si se introducen más parametros de los debidos*/
+		printf("Error en la entrada de parametros, se inicializarán a los valores por defecto siendo 20 el numero maximo de clientes y 5 el de las maquinas de autochekin.\n");
+		break;
+		
+	}
+	
 	/*Mensajes para los logs*/
 	char msg[130];
 
@@ -113,9 +156,17 @@ int main(int argc, char* argv[]){
   	
 
   	/*Máquinas de checkIn*/
-  	for(i = 0; i < 5; i++){
+  	for(i = 0; i < numeroMaquinas; i++){
   		maquinasCheck[i] = 0;
   	}
+
+	/*Estrucutra para el cambio de variables y se toma SIGPIPE para el cambio de estas.*/
+	struct sigaction val = {0};
+	val.sa_handler = cambioValores;
+	if(-1 == sigaction(SIGPIPE, &val, NULL)){
+		perror("Cambio de valores");
+		exit(-1);
+	}
 
   	/*Fichero log*/
   	logFile = fopen("registroTiempos.log", "w");
@@ -595,6 +646,9 @@ void writeLogMessage (int clienteRecepcionistaMaquina, int id, char *msg) {
 		case 3: 
 			sprintf(fuenteLog, "Ascensor");
 			break;
+		case 4: 
+			sprintf(fuenteLog, "Cambio Valor");
+			break;
 	}
 	// Escribimos en el log
 	logFile = fopen("registroTiempos.log", "a");
@@ -633,8 +687,80 @@ void eliminarCliente(int id){
 	
 	pthread_mutex_unlock(&mutexColaClientes);
 }
+
+/*Funcion que cambia valores, parte dinamica de recursos (opcional)*/
+void cambioValores(int sig){
+	printf("incremento de valores.\n");
+	char msjLog[130];
+	sprintf(msjLog, "Se van a incrementar valores del hotel.\n");
+	writeLogMessage(4, 0 , msjLog);
+	
+	int valorACambiar, nuevoValor, pivote = 1;
+	
+	do{
+		printf("¿Qué valor desea cambiar? Pulse 1 si quiere incrementar el numero de clientes o pulse 2 si quiere incrementar el numero de maquinasChecking.\n");
+		scanf("%d", &valorACambiar);
+		
+		if (valorACambiar != 1 && valorACambiar != 2){
+			printf("Opcion elegida incorrecta, seleccione entre 1 y 2.\n");
+			pivote = 0;
+		}
+		
+	} while (pivote != 1);
+	
+	/*Una vez salimos del bucle y tenemos la opcion escogida...*/
+	
+	do{
+	
+		if(valorACambiar == 1){
+			printf("¿Cuantos quieres que aumente el numero de clientes que puede acceder al hotel?");
+		} else {
+			printf("¿Cuantos quieres que aumente el numero de maquinas de checkin del hotel?");
+		}
+		scanf("%d",&nuevoValor);
+		
+		if(nuevoValor < 1){
+			printf("Valor introducido erroneo, tiene que ser mayor que 0.\n");
+			pivote = 0;
+		}
+		
+	} while(pivote != 1);
+	
+	/*Una vez tengamos el valor que queremos incrementar...*/
+	
+	int i;
+	if(valorACambiar == 1){
+		/* Bloquemaos la cola para que no lleguen mas clientes mientras hacemos el incremento */
+		pthread_mutex_lock(&mutexColaClientes);
+		
+		/* Incrementamos el valor maximo de clientes */
+		maximoClientes += nuevoValor;
+		
+		printf("Se ha incrementado el numero maximo de clientes que puede acceder al hotel.\n");
+		sprintf(msjLog, "Se ha incrementado el numero maximo de clientes que puede acceder al hotel\n");
+		writeLogMessage(4, 0 , msjLog);
+	
+		/* Desbloquemoas la cola tras el cambio */
+		pthread_mutex_unlock(&mutexColaClientes);
+		
+	} else {
+		/* Bloquemaos la cola para que no funcionen mas maquinas mientras hacemos el incremento */
+		pthread_mutex_lock(&mutexMaquinas);
+		
+		/* Incrementamos el valor de numero de maquinas */
+		numeroMaquinas += nuevoValor;
+		
+		printf("Se ha incrementado el numero de maquinas a las que se pueden acceder del hotel.\n");
+		sprintf(msjLog, "Se ha incrementado el numero de maquinas a las que se pueden acceder del hotel.\n");
+		writeLogMessage(4, 0 , msjLog);
+		
+		/* Desbloquemoas la cola tras el cambio */
+		pthread_mutex_unlock(&mutexMaquinas);
+	}
+}
 /*Funcion que recibe la señal de terminar el programa.*/
 void terminar(int sig){
+
 	signal(SIGUSR1, SIG_IGN);
 	signal(SIGUSR2, SIG_IGN);
 	signal(SIGINT, SIG_IGN);
