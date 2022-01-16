@@ -12,8 +12,8 @@
 
 /* Declaraciones globales */
 
-int maximoClientes = 20;
-int numeroMaquinas = 5;
+int maximoClientes;
+int numeroMaquinas;
 
 /*Semaforos y variables condicion*/
 pthread_mutex_t mutexLog;
@@ -76,10 +76,9 @@ int main(int argc, char const *argv[]){
 	int noVip1 = 0; //no vip
 	int noVip2 = 1;	//no vip
 	int i;
+	maximoClientes = 20;
+	numeroMaquinas = 5;
 	
-	
-
-
 	/*Comprobación de numero de clientes introducidos por parametro es correcto*/
 	switch(argc){
 		case 1:
